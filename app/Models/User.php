@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -45,4 +46,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function role() { return $this->belongsTo(Role::class); }
+    public function managedProjects() { return $this->hasMany(Project::class, 'project_manager_id'); }
+    public function projects() { return $this->belongsToMany(Project::class)->withPivot('project_role')->withTimestamps(); }
+    public function tasks() { return $this->hasMany(Task::class, 'assigned_to_id'); }
 }
