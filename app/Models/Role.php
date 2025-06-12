@@ -3,8 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Role extends Model
 {
-    public function users() { return $this->hasMany(User::class); }
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'slug'
+    ];
+
+    public function users() 
+    { 
+        return $this->hasMany(User::class); 
+    }
 }

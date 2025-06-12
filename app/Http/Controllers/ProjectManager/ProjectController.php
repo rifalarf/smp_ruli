@@ -98,4 +98,23 @@ class ProjectController extends Controller
         $project->delete();
         return redirect()->route('pm.projects.index')->with('success', 'Proyek berhasil dihapus.');
     }
+
+    public function kanban(Project $project)
+    {
+        $this->authorize('view', $project);
+        return view('pm.projects.kanban', compact('project'));
+    }
+
+    public function updateStatus(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+        
+        $validated = $request->validate([
+            'status' => 'required|in:Belum Dimulai,In Progress,Selesai,Revisi,Dibatalkan'
+        ]);
+
+        $project->update($validated);
+
+        return response()->json(['success' => true]);
+    }
 }

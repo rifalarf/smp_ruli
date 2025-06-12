@@ -5,50 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ config('app.name', 'Laravel') }} - @yield('title', 'Dashboard')</title>
 
-    @vite(['resources/scss/app.scss', 'resources/js/app.js'])
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body class="bg-light">
-    <div class="d-flex" id="wrapper">
-        <div class="bg-white border-end" id="sidebar-wrapper" style="width: 280px;">
-            <div class="sidebar-heading border-bottom bg-light p-3">
-                <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none h5">
-                    {{ config('app.name', 'Laravel') }}
-                </a>
-            </div>
-            <div class="list-group list-group-flush">
-                {{-- Navigasi akan ditempatkan di sini --}}
-                <a class="list-group-item list-group-item-action list-group-item-light p-3" href="{{ route('dashboard') }}">Dashboard</a>
-                
-                {{-- Contoh Navigasi Berdasarkan Peran --}}
-                @if(auth()->user()->role->slug == 'admin')
-                    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#">Manajemen Pengguna</a>
-                @endif
-                 @if(auth()->user()->role->slug == 'pm')
-                    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#">Proyek Saya</a>
-                @endif
-                 @if(auth()->user()->role->slug == 'employee')
-                    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#">Tugas Saya</a>
-                @endif
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ route('dashboard') }}">
+                <i class="fas fa-project-diagram me-2"></i>
+                Sistem Manajemen Proyek
+            </a>
 
-            </div>
-        </div>
-        <div id="page-content-wrapper" class="w-100">
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
-                <div class="container-fluid">
-                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                        <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    @auth
+                        @if(auth()->user()->isAdmin())
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    {{ Auth::user()->name }}
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-users-cog me-1"></i> Admin
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profile</a>
-                                    <div class="dropdown-divider"></div>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">
+                                        <i class="fas fa-users me-2"></i> Manajemen Pengguna
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#">
+                                        <i class="fas fa-file-alt me-2"></i> Validasi Laporan
+                                    </a></li>
+                                </ul>
+                            </li>
+                        @endif
+
+                        @if(auth()->user()->isProjectManager())
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-project-diagram me-1"></i> Proyek
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ route('pm.projects.index') }}">
+                                        <i class="fas fa-list me-2"></i> Daftar Proyek
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#">
+                                        <i class="fas fa-tasks me-2"></i> Manajemen Tugas
+                                    </a></li>
+                                </ul>
+                            </li>
+                        @endif
+
+                        @if(auth()->user()->isEmployee())
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    <i class="fas fa-tasks me-1"></i> Tugas Saya
+                                </a>
+                            </li>
+                        @endif
+                    @endauth
+                </ul>
+
+                <!-- Right Side Of Navbar -->
+                <ul class="navbar-nav">
+                    @auth
+                        <!-- Notification Bell -->
+                        <li class="nav-item">
+                            <x-notification-bell />
+                        </li>
+
+                        <!-- User Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                                <div class="bg-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user text-primary"></i>
+                                </div>
+                                {{ auth()->user()->name }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <span class="dropdown-item-text">
+                                        <strong>{{ auth()->user()->role->name }}</strong><br>
+                                        <small class="text-muted">{{ auth()->user()->division ?? 'No Division' }}</small>
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}">
+                                    <i class="fas fa-user-edit me-2"></i> Profil
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <button class="dropdown-item" type="submit">Log Out</button>
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    @else
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('login') }}">Login</a>
+                        </li>
+                    @endauth
+                </ul>
+            </div>
+        </div>
+    </nav>
                                     </form>
                                 </div>
                             </li>

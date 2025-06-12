@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('reports', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
+            $table->foreignId('submitted_by_id')->constrained('users')->onDelete('cascade');
+            $table->text('content');
+            $table->enum('status', ['Menunggu Persetujuan', 'Disetujui', 'Ditolak'])->default('Menunggu Persetujuan');
+            $table->text('validation_notes')->nullable();
             $table->timestamps();
         });
     }

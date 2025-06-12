@@ -1,34 +1,93 @@
 @extends('layouts.app')
 
-@section('content')
-    <h1 class="mb-4">Dashboard Project Manager</h1>
+@section('title', 'Project Manager Dashboard')
 
-    <div class="row">
-        {{-- Grafik Progres Proyek --}}
-        <div class="col-lg-8 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header">Progres Proyek</div>
+@section('header')
+    <h1 class="h2">Dashboard Project Manager</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ route('pm.projects.create') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i> Buat Proyek Baru
+            </a>
+        </div>
+    </div>
+@endsection
+
+@section('content')
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-primary border-4 shadow h-100 py-2">
                 <div class="card-body">
-                    <canvas id="projectStatusChart"></canvas>
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Total Proyek
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ $total_projects ?? 0 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-project-diagram fa-2x text-muted"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {{-- Tugas Butuh Approval & Mendekati Deadline --}}
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">Tugas Butuh Approval</div>
-                <div class="list-group list-group-flush">
-                    @forelse($tasks_need_approval as $task)
-                        <a href="#" class="list-group-item list-group-item-action">{{ $task->title }} - {{ $task->project->name }}</a>
-                    @empty
-                        <div class="list-group-item">Tidak ada tugas.</div>
-                    @endforelse
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-success border-4 shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Proyek Aktif
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ $active_projects ?? 0 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-cog fa-2x text-muted"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="card shadow-sm">
-                <div class="card-header text-bg-warning">Tugas Mendekati Deadline</div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-info border-4 shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                Total Tugas
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ $total_tasks ?? 0 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tasks fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-warning border-4 shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                Tugas Overdue
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ $overdue_tasks ?? 0 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
                 <div class="list-group list-group-flush">
                      @forelse($tasks_near_deadline as $task)
                         <a href="#" class="list-group-item list-group-item-action">

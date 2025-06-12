@@ -15,6 +15,9 @@ class PmMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        return $next($request);
+        if (auth()->check() && auth()->user()->role->slug === 'pm') {
+            return $next($request);
+        }
+        abort(403, 'UNAUTHORIZED - Project Manager access required');
     }
 }

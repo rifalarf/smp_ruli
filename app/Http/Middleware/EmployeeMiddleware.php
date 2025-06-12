@@ -15,6 +15,9 @@ class EmployeeMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        return $next($request);
+        if (auth()->check() && auth()->user()->role->slug === 'employee') {
+            return $next($request);
+        }
+        abort(403, 'UNAUTHORIZED - Employee access required');
     }
 }
