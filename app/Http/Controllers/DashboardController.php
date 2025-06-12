@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Report;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -19,6 +20,15 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        // Pastikan pengguna memiliki peran sebelum mengakses slug
+        if (!$user->role) {
+            // Redirect atau tampilkan pesan error jika peran tidak ada
+            // Ini untuk mencegah error jika relasi role tidak ditemukan
+            Auth::logout();
+            return redirect('/login')->withErrors('Peran pengguna tidak valid. Silakan hubungi administrator.');
+        }
+
         $role = $user->role->slug;
 
         switch ($role) {
@@ -42,7 +52,13 @@ class DashboardController extends Controller
         $data = [
             'total_users' => User::count(),
             'total_projects' => Project::count(),
-            'pending_reports' => Report::where('status', 'Menunggu Persetujuan')->get(),
+            'active_projects' => Project::where('status', 'In Progress')->count(),
+            'pending_reports_count' => Report::where('status', 'Menunggu Persetujuan')->count(),
+            'pending_reports' => Report::with(['project', 'submittedBy'])
+                ->where('status', 'Menunggu Persetujuan')
+                ->latest()
+                ->take(5)
+                ->get(),
         ];
         return view('admin.dashboard', $data);
     }
@@ -53,23 +69,27 @@ class DashboardController extends Controller
     private function pmDashboard()
     {
         $managedProjects = Project::where('project_manager_id', Auth::id())->with('tasks')->get();
+        $projectIds = $managedProjects->pluck('id');
 
-        $tasks_need_approval = Task::whereIn('project_id', $managedProjects->pluck('id'))
-                                     ->where('status', 'Selesai') // Asumsi 'Selesai' dari karyawan butuh approval PM
+        $tasks_need_approval = Task::whereIn('project_id', $projectIds)
+                                     ->where('status', 'Selesai')
                                      ->get();
 
-        $tasks_near_deadline = Task::whereIn('project_id', $managedProjects->pluck('id'))
+        $tasks_near_deadline = Task::whereIn('project_id', $projectIds)
                                      ->where('status', '!=', 'Selesai')
                                      ->where('deadline', '>=', now())
                                      ->where('deadline', '<=', now()->addDays(7))
                                      ->orderBy('deadline', 'asc')
                                      ->get();
-
-        // Data untuk Chart.js (contoh: status proyek)
+                                     
         $projectStatusData = $managedProjects->groupBy('status')->map->count();
 
         $data = [
-            'projects' => $managedProjects,
+            'total_projects' => $managedProjects->count(),
+            'active_projects' => $managedProjects->where('status', 'In Progress')->count(),
+            'total_tasks' => Task::whereIn('project_id', $projectIds)->count(),
+            'overdue_tasks' => Task::whereIn('project_id', $projectIds)->where('deadline', '<', now())->where('status', '!=', 'Selesai')->count(),
+            'projects' => $managedProjects->take(5),
             'tasks_need_approval' => $tasks_need_approval,
             'tasks_near_deadline' => $tasks_near_deadline,
             'project_status_labels' => $projectStatusData->keys(),
@@ -81,18 +101,41 @@ class DashboardController extends Controller
 
     /**
      * Menyiapkan data dan menampilkan dashboard untuk Karyawan.
+     * INI ADALAH FUNGSI YANG DIPERBAIKI
      */
     private function employeeDashboard()
     {
-        $my_tasks = Task::where('assigned_to_id', Auth::id())
-                        ->orderByRaw("FIELD(status, 'In Progress', 'Belum Dikerjakan', 'Revisi', 'Blocked', 'Selesai')")
-                        ->orderBy('deadline', 'asc')
-                        ->get();
+        // Query dasar untuk tugas milik pengguna yang sedang login
+        $myTasksQuery = Task::where('assigned_to_id', Auth::id());
+
+        // FIX: Menggunakan CASE statement untuk custom sorting yang kompatibel dengan SQLite & MySQL
+        $orderCase = "CASE
+                        WHEN status = 'In Progress' THEN 1
+                        WHEN status = 'Belum Dikerjakan' THEN 2
+                        WHEN status = 'Revisi' THEN 3
+                        WHEN status = 'Blocked' THEN 4
+                        WHEN status = 'Selesai' THEN 5
+                        ELSE 6
+                      END";
+
+        // Mengambil semua tugas dengan urutan yang sudah diperbaiki
+        $tasks = $myTasksQuery->orderByRaw($orderCase)
+                             ->orderBy('deadline', 'asc')
+                             ->get();
+
+        // Menghitung statistik berdasarkan koleksi yang sudah diambil
+        $stats = [
+            'in_progress' => $tasks->where('status', 'In Progress')->count(),
+            'pending' => $tasks->where('status', 'Belum Dikerjakan')->count(),
+            'completed' => $tasks->where('status', 'Selesai')->count(),
+            'revision' => $tasks->where('status', 'Revisi')->count(),
+        ];
 
         $data = [
-            'tasks' => $my_tasks,
-            'in_progress_tasks_count' => $my_tasks->where('status', 'In Progress')->count(),
+            'tasks' => $tasks,
+            'stats' => $stats,
         ];
+        
         return view('employee.dashboard', $data);
     }
 }

@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Task extends Model
 {
@@ -13,83 +14,65 @@ class Task extends Model
         'project_id',
         'title',
         'description',
-        'assigned_to_id',
-        'assigned_by_id',
         'status',
+        'priority',
         'deadline',
-        'parent_task_id'
+        'assigned_to_id'
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
     protected $casts = [
-        'deadline' => 'date',
+        'deadline' => 'datetime',
     ];
 
-    // Relationships
-    public function project() 
-    { 
-        return $this->belongsTo(Project::class); 
-    }
-    
-    public function assignedTo() 
-    { 
-        return $this->belongsTo(User::class, 'assigned_to_id'); 
-    }
-    
-    public function assignedBy() 
-    { 
-        return $this->belongsTo(User::class, 'assigned_by_id'); 
-    }
-    
-    public function parentTask() 
-    { 
-        return $this->belongsTo(Task::class, 'parent_task_id'); 
-    }
-    
-    public function subTasks() 
-    { 
-        return $this->hasMany(Task::class, 'parent_task_id'); 
-    }
-    
-    public function updates() 
-    { 
-        return $this->hasMany(TaskUpdate::class); 
-    }
-    
-    public function comments() 
-    { 
-        return $this->morphMany(Comment::class, 'commentable'); 
-    }
-    
-    public function attachments() 
-    { 
-        return $this->morphMany(Attachment::class, 'attachable'); 
-    }
-
-    // Helper methods
-    public function getDaysRemainingAttribute()
+    public function project()
     {
-        return now()->diffInDays($this->deadline, false);
+        return $this->belongsTo(Project::class);
     }
 
-    public function isOverdue()
+    public function assignedTo()
     {
-        return $this->deadline < now() && $this->status !== 'Selesai';
+        return $this->belongsTo(User::class, 'assigned_to_id');
     }
 
+    public function updates()
+    {
+        return $this->hasMany(TaskUpdate::class);
+    }
+
+    /**
+     * Accessor untuk mendapatkan kelas CSS badge berdasarkan status.
+     *
+     * @return string
+     */
     public function getStatusBadgeClassAttribute()
     {
-        return match($this->status) {
-            'Belum Dikerjakan' => 'bg-secondary',
-            'In Progress' => 'bg-warning',
-            'Selesai' => 'bg-success',
-            'Revisi' => 'bg-info',
-            'Blocked' => 'bg-danger',
-            default => 'bg-secondary'
-        };
+        switch ($this->status) {
+            case 'In Progress':
+                return 'bg-primary';
+            case 'Selesai':
+                return 'bg-success';
+            case 'Revisi':
+                return 'bg-warning text-dark';
+            case 'Blocked':
+                return 'bg-danger';
+            case 'Belum Dikerjakan':
+            default:
+                return 'bg-secondary';
+        }
     }
 
-    public function getTotalHoursSpentAttribute()
+    /**
+     * Memeriksa apakah tugas sudah melewati deadline.
+     *
+     * @return bool
+     */
+    public function isOverdue()
     {
-        return $this->updates()->sum('hours_spent') ?? 0;
+        return $this->deadline && $this->deadline->isPast() && $this->status !== 'Selesai';
     }
 }
